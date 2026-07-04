@@ -20,9 +20,12 @@ curl -sS -X POST -H "Authorization: Bearer ${OPENCLAW_GATEWAY_TOKEN}" "http://12
 
 Configuration is kept in one repeatable `env.example` group. Each
 `NEXTCLOUD_SYNC_FOLDERS` value is CSV; every entry maps
-`REMOTE_PATH|LOCAL_PATH`. Account 2 uses `_02`, account 3 uses `_03`, and so
-on. `NEXTCLOUD_TIMER=0` disables its automatic systemd timer while manual sync
-remains available.
+`LOCAL_PATH|REMOTE_PATH`. Account 2 uses `_02`, account 3 uses `_03`, and so
+on. The generated defaults are `/named_volumes/NEXTCLOUD|/`,
+`/named_volumes/NEXTCLOUD_02|/`, and so on. These paths become named-volume
+mounts in generated Compose and Quadlet files; every configured local path is
+created idempotently even when it is not a volume. `NEXTCLOUD_TIMER=0` disables
+its automatic timer while manual sync remains available.
 
 Release artifacts:
 

@@ -42,7 +42,7 @@ def value(field: str, suffix: str) -> str:
 def parse_folders(raw: str) -> tuple[SyncPair, ...]:
     pairs: list[SyncPair] = []
     for entry in next(csv.reader([raw], skipinitialspace=True), []):
-        remote, separator, local = entry.partition("|")
+        local, separator, remote = entry.partition("|")
         if not separator or not remote.strip() or not local.strip():
             raise ValueError(f"Invalid NEXTCLOUD_SYNC_FOLDERS entry: {entry!r}")
         local_path = Path(local.strip()).expanduser()
@@ -122,12 +122,23 @@ def status_text(configured: list[Account]) -> str:
     return "\n".join(lines)
 
 
+def initialize(configured: list[Account]) -> None:
+    for account in configured:
+        for pair in account.folders:
+            pair.local.mkdir(parents=True, exist_ok=True)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--account", type=int)
     parser.add_argument("--status", action="store_true")
+    parser.add_argument("--init", action="store_true")
     args = parser.parse_args()
     configured = accounts()
+    if args.init:
+        initialize(configured)
+        print("NEXTCLOUD directories initialized.")
+        return 0
     if args.status:
         print(status_text(configured))
         return 0

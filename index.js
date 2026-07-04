@@ -209,7 +209,8 @@ async function timerSync(api, account) {
   }
 }
 
-function startFallbackTimers(api) {
+async function startFallbackTimers(api) {
+  await runPython(api, "nextcloud_sync.py", ["--init"]);
   if (fs.existsSync("/usr/lib/systemd/system-generators/nextcloud-timer-generator")) return;
   for (const timer of configuredTimers()) {
     const first = setTimeout(() => {
@@ -280,7 +281,7 @@ export default definePluginEntry({
   register(api) {
     api.registerService({
       id: "nextcloud-sync-timers",
-      start: () => startFallbackTimers(api),
+      start: async () => startFallbackTimers(api),
       stop: async () => stopFallbackTimers(),
     });
     api.registerTool(() => ({
