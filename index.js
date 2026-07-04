@@ -166,7 +166,8 @@ async function runCalendar(ctx, signal) {
 }
 
 async function handleCommand(ctx, api) {
-  const parts = (ctx.args ?? "").trim().split(/\s+/).filter(Boolean);
+  const raw = String(ctx.args ?? "").trim().replace(/^\/?nextcloud(?:@\S+)?\s*/i, "");
+  const parts = raw.split(/\s+/).filter(Boolean);
   const action = (parts.shift() ?? "status").toLowerCase();
   if (action === "sync") {
     const account = parts[0] && /^\d+$/.test(parts[0]) ? String(Number(parts[0])) : undefined;
