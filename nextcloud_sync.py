@@ -101,7 +101,11 @@ def sync_account(account: Account) -> int:
     child_env.update(NC_USER=account.user, NC_PASSWORD=account.password)
     for pair in account.folders:
         pair.local.mkdir(parents=True, exist_ok=True)
-        command = [str(executable), "--non-interactive"]
+        command = [
+            str(executable), "--non-interactive",
+            "--user", account.user,
+            "--password", account.password,
+        ]
         if pair.remote.rstrip("/"):
             command.extend(["--path", pair.remote])
         command.extend([str(pair.local), account.url])
