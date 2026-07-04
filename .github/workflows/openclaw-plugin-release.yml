@@ -1,0 +1,64 @@
+name: OpenClaw plugin
+
+on:
+  pull_request:
+  push:
+    branches: ["**"]
+    tags: ["20*.*.*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Check plugin sources
+        run: bash scripts/check.sh
+      - name: Build Fedora plugin
+        run: |
+          bash scripts/fetch-runtime.sh fedora64
+          ZIP_NAME=nextcloud-fedora64-plugin-latest.zip bash ./openclaw_plugin_zip.sh
+          rm -rf runtime
+      - name: Build Debian plugin
+        run: |
+          bash scripts/fetch-runtime.sh debian64
+          ZIP_NAME=nextcloud-debian64-plugin-latest.zip bash ./openclaw_plugin_zip.sh
+          rm -rf runtime
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nextcloud-linux64-plugin-latest
+          path: |
+            nextcloud-*-plugin-latest.zip
+            nextcloud-*-plugin-latest.zip.sha256
+      - name: Publish tagged release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" nextcloud-*-plugin-latest.zip* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" nextcloud-*-plugin-latest.zip* \
+              --title "$GITHUB_REF_NAME" --notes "NEXTCLOUD OpenClaw plugin for Fedora 44 and Debian 12."
+          fi
+      - name: Publish latest alias
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view latest >/dev/null 2>&1; then
+            gh release upload latest nextcloud-*-plugin-latest.zip* --clobber
+            gh release edit latest --title latest --notes "Latest NEXTCLOUD OpenClaw plugin."
+          else
+            gh release create latest nextcloud-*-plugin-latest.zip* --target "$GITHUB_SHA" \
+              --title latest --notes "Latest NEXTCLOUD OpenClaw plugin."
+          fi

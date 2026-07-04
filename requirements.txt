@@ -1,0 +1,4 @@
+icalendar
+python-dotenv
+requests
+recurring_ical_events

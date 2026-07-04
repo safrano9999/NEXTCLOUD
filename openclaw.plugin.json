@@ -1,0 +1,25 @@
+{
+  "id": "nextcloud",
+  "name": "NEXTCLOUD",
+  "description": "Deterministic Nextcloud file synchronization and calendar access.",
+  "contracts": {
+    "tools": ["nextcloud_run"]
+  },
+  "activation": {
+    "onStartup": true
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "configPath": {"type": "string"},
+      "pythonPath": {"type": "string"},
+      "envFile": {"type": "string"},
+      "logDir": {"type": "string"},
+      "certPath": {"type": "string"},
+      "timezone": {"type": "string", "default": "Europe/Vienna"},
+      "emptyMessage": {"type": "string", "default": "📭 Keine Termine im Zeitfenster."},
+      "autoSetupPython": {"type": "boolean", "default": true}
+    }
+  }
+}

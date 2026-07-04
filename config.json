@@ -1,0 +1,6 @@
+{
+  "envFile": ".env",
+  "timezone": "Europe/Vienna",
+  "emptyMessage": "📭 Keine Termine im Zeitfenster.",
+  "autoSetupPython": true
+}
