@@ -171,7 +171,9 @@ async function handleCommand(ctx, api) {
   const action = (parts.shift() ?? "status").toLowerCase();
   if (action === "sync") {
     const account = parts[0] && /^\d+$/.test(parts[0]) ? String(Number(parts[0])) : undefined;
-    return { text: await runSync(api, account) };
+    const calendar = await runCalendar(api);
+    const sync = await runSync(api, account);
+    return { text: `${calendar}\n\n${sync}` };
   }
   if (action === "calendar") return { text: await runCalendar(api) };
   if (action === "status") return { text: await runStatus(api) };
