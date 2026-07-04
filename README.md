@@ -12,6 +12,12 @@ Commands:
 /nextcloud calendar
 ```
 
+Enter this to trigger the calendar webhook from inside a container:
+
+```bash
+curl -sS -X POST -H "Authorization: Bearer ${OPENCLAW_GATEWAY_TOKEN}" "http://127.0.0.1:${OPENCLAW_GATEWAY_PORT:-18789}/plugins/nextcloud/run"
+```
+
 Configuration is kept in one repeatable `env.example` group. Each
 `NEXTCLOUD_SYNC_FOLDERS` value is CSV; every entry maps
 `REMOTE_PATH|LOCAL_PATH`. Account 2 uses `_02`, account 3 uses `_03`, and so

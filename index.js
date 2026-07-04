@@ -10,6 +10,8 @@ const defaultConfigPath = path.join(pluginRoot, "config.json");
 const requirementsPath = path.join(pluginRoot, "requirements.txt");
 const venvDir = path.join(pluginRoot, ".venv");
 const venvPython = path.join(venvDir, "bin", "python");
+const timerHandles = [];
+const activeSyncs = new Set();
 
 const configSchema = {
   type: "object",
@@ -23,6 +25,23 @@ const configSchema = {
     timezone: { type: "string", default: "Europe/Vienna" },
     emptyMessage: { type: "string", default: "📭 Keine Termine im Zeitfenster." },
     autoSetupPython: { type: "boolean", default: true },
+    webhook: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        enabled: { type: "boolean", default: true },
+        path: { type: "string", default: "/plugins/nextcloud/run" },
+      },
+    },
+    delivery: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        channel: { type: "string", default: "telegram" },
+        target: { type: "string" },
+        accountId: { type: "string" },
+      },
+    },
   },
 };
 
@@ -158,12 +177,112 @@ async function handleCommand(ctx, api) {
   return { text: "Usage: /nextcloud [status|sync [account]|calendar]" };
 }
 
+function timerMilliseconds(raw) {
+  const match = String(raw ?? "").trim().toLowerCase().match(/^(\d+(?:\.\d+)?)(s|m|h|d)$/);
+  if (!match) return 0;
+  const factors = { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 };
+  return Number(match[1]) * factors[match[2]];
+}
+
+function configuredTimers() {
+  const timers = [];
+  for (const [key, value] of Object.entries(process.env)) {
+    const match = key.match(/^NEXTCLOUD_TIMER(?:_(\d+))?$/);
+    if (!match) continue;
+    const milliseconds = timerMilliseconds(value);
+    if (!milliseconds) continue;
+    timers.push({ account: String(Number(match[1] ?? "1")), milliseconds });
+  }
+  return timers;
+}
+
+async function timerSync(api, account) {
+  if (activeSyncs.has(account)) return;
+  activeSyncs.add(account);
+  try {
+    const text = await runSync(api, account);
+    api.logger.info?.(`[nextcloud] timer account ${account}: ${text.split("\n").at(-1)}`);
+  } catch (error) {
+    api.logger.error?.(`[nextcloud] timer account ${account} failed: ${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    activeSyncs.delete(account);
+  }
+}
+
+function startFallbackTimers(api) {
+  if (fs.existsSync("/usr/lib/systemd/system-generators/nextcloud-timer-generator")) return;
+  for (const timer of configuredTimers()) {
+    const first = setTimeout(() => {
+      void timerSync(api, timer.account);
+      const interval = setInterval(() => void timerSync(api, timer.account), timer.milliseconds);
+      timerHandles.push(interval);
+    }, 120_000);
+    timerHandles.push(first);
+  }
+}
+
+function stopFallbackTimers() {
+  while (timerHandles.length) clearTimeout(timerHandles.pop());
+}
+
+async function deliverIfConfigured(api, text) {
+  const delivery = effectiveConfig(api).delivery;
+  if (!isRecord(delivery) || !readString(delivery.target)) return false;
+  const channel = readString(delivery.channel) ?? "telegram";
+  const sendText = (await api.runtime.channel.outbound.loadAdapter(channel))?.sendText;
+  if (!sendText) throw new Error(`No outbound adapter configured for ${channel}.`);
+  await sendText({
+    cfg: api.runtime.config?.current?.() ?? api.config,
+    to: delivery.target,
+    text,
+    ...(readString(delivery.accountId) ? { accountId: delivery.accountId } : {}),
+  });
+  return true;
+}
+
+function sendJson(res, status, payload) {
+  res.statusCode = status;
+  res.setHeader("content-type", "application/json; charset=utf-8");
+  res.end(`${JSON.stringify(payload)}\n`);
+}
+
+function registerWebhook(api) {
+  const webhook = effectiveConfig(api).webhook;
+  if (isRecord(webhook) && webhook.enabled === false) return;
+  api.registerHttpRoute({
+    path: readString(webhook?.path) ?? "/plugins/nextcloud/run",
+    auth: "gateway",
+    match: "exact",
+    replaceExisting: true,
+    async handler(req, res) {
+      if (req.method !== "POST") {
+        res.setHeader("allow", "POST");
+        sendJson(res, 405, { ok: false, error: "method_not_allowed" });
+        return true;
+      }
+      try {
+        const text = await runCalendar(api);
+        const delivered = await deliverIfConfigured(api, text);
+        sendJson(res, 200, { ok: true, text, delivered });
+      } catch (error) {
+        sendJson(res, 500, { ok: false, error: error instanceof Error ? error.message : String(error) });
+      }
+      return true;
+    },
+  });
+}
+
 export default definePluginEntry({
   id: "nextcloud",
   name: "NEXTCLOUD",
   description: "Deterministic Nextcloud file synchronization and calendar access.",
   configSchema,
   register(api) {
+    api.registerService({
+      id: "nextcloud-sync-timers",
+      start: () => startFallbackTimers(api),
+      stop: async () => stopFallbackTimers(),
+    });
     api.registerTool(() => ({
       name: "nextcloud_run",
       label: "NEXTCLOUD",
@@ -185,5 +304,6 @@ export default definePluginEntry({
       requireAuth: true,
       handler: (ctx) => handleCommand(ctx, api),
     });
+    registerWebhook(api);
   },
 });

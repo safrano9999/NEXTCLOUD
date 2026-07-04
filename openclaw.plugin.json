@@ -19,7 +19,24 @@
       "certPath": {"type": "string"},
       "timezone": {"type": "string", "default": "Europe/Vienna"},
       "emptyMessage": {"type": "string", "default": "📭 Keine Termine im Zeitfenster."},
-      "autoSetupPython": {"type": "boolean", "default": true}
+      "autoSetupPython": {"type": "boolean", "default": true},
+      "webhook": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {"type": "boolean", "default": true},
+          "path": {"type": "string", "default": "/plugins/nextcloud/run"}
+        }
+      },
+      "delivery": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "channel": {"type": "string", "default": "telegram"},
+          "target": {"type": "string"},
+          "accountId": {"type": "string"}
+        }
+      }
     }
   }
 }
