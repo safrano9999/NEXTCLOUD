@@ -24,8 +24,11 @@ Configuration is kept in one repeatable `env.example` group. Each
 on. The generated defaults are `/named_volumes/NEXTCLOUD|/`,
 `/named_volumes/NEXTCLOUD_02|/`, and so on. These paths become named-volume
 mounts in generated Compose and Quadlet files; every configured local path is
-created idempotently even when it is not a volume. `NEXTCLOUD_TIMER=0` disables
-its automatic timer while manual sync remains available.
+created idempotently even when it is not a volume. Leaving
+`NEXTCLOUD_SYNC_FOLDERS` blank disables file synchronization.
+`NEXTCLOUD_CALENDAR=1` independently enables CalDAV calendar synchronization;
+any other value disables it. `NEXTCLOUD_TIMER=0` disables the automatic file
+sync timer while manual synchronization remains available.
 
 Release artifacts:
 

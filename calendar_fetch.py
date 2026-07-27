@@ -97,7 +97,7 @@ def collect_calendar_values(
             if mapped == "url":
                 value = f"{value.rstrip('/')}/remote.php/dav"
             grouped.setdefault(prefix, {})[mapped] = value
-        grouped = {prefix: fields for prefix, fields in grouped.items() if enabled.get(prefix, True)}
+        grouped = {prefix: fields for prefix, fields in grouped.items() if enabled.get(prefix, False)}
         return direct_urls, grouped
 
     for key, value in values.items():
