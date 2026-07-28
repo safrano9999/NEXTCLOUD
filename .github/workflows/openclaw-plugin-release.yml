@@ -8,18 +8,14 @@ on:
 
 permissions:
   contents: write
-  actions: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      DOCKER_BUILD_RECORD_UPLOAD: "false"
     steps:
       - uses: actions/checkout@v4
-      - name: Purge old Actions artifacts
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: bash .github/scripts/purge-github-actions-artifacts.sh
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -100,9 +96,3 @@ jobs:
             gh release create latest nextcloud-*-plugin-latest.zip* --target "$GITHUB_SHA" \
               --title latest --notes "Latest NEXTCLOUD OpenClaw plugin."
           fi
-      - name: Purge Actions artifacts after run
-        if: always()
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: bash .github/scripts/purge-github-actions-artifacts.sh
