@@ -39,13 +39,6 @@ jobs:
           bash scripts/fetch-runtime.sh debian64
           ZIP_NAME=nextcloud-debian64-plugin-latest.zip bash ./openclaw_plugin_zip.sh
           rm -rf runtime
-      - uses: actions/upload-artifact@v4
-        with:
-          name: nextcloud-linux64-plugin-latest
-          retention-days: 1
-          path: |
-            nextcloud-*-plugin-latest.zip
-            nextcloud-*-plugin-latest.zip.sha256
       - name: Publish tagged release
         if: startsWith(github.ref, 'refs/tags/')
         env:
