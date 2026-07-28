@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   build:
@@ -16,6 +17,11 @@ jobs:
       DOCKER_BUILD_RECORD_UPLOAD: "false"
     steps:
       - uses: actions/checkout@v4
+      - name: Purge old Actions artifacts
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/purge-github-actions-artifacts.sh
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -51,7 +57,8 @@ jobs:
           mkdir -p runtime
           unzip -q .runtime-dist/fedora44/nextcloudcmd-fedora44-x86_64.zip -d runtime
           test -x runtime/opt/nextcloudcmd/bin/nextcloudcmd
-          ZIP_NAME=nextcloud-fedora64-plugin-latest.zip bash ./openclaw_plugin_zip.sh
+          ZIP_NAME=nextcloud-fedora64-plugin-latest.zip \
+            bash .github/scripts/openclaw_plugin_zip.sh
           rm -rf runtime .runtime-dist/fedora44
       - name: Build Debian runtime
         uses: docker/build-push-action@v6
@@ -71,7 +78,8 @@ jobs:
           mkdir -p runtime
           unzip -q .runtime-dist/debian12/nextcloudcmd-debian12-x86_64.zip -d runtime
           test -x runtime/opt/nextcloudcmd/bin/nextcloudcmd
-          ZIP_NAME=nextcloud-debian64-plugin-latest.zip bash ./openclaw_plugin_zip.sh
+          ZIP_NAME=nextcloud-debian64-plugin-latest.zip \
+            bash .github/scripts/openclaw_plugin_zip.sh
           rm -rf runtime .runtime-dist
       - name: Publish tagged release
         if: startsWith(github.ref, 'refs/tags/')
@@ -96,3 +104,9 @@ jobs:
             gh release create latest nextcloud-*-plugin-latest.zip* --target "$GITHUB_SHA" \
               --title latest --notes "Latest NEXTCLOUD OpenClaw plugin."
           fi
+      - name: Purge Actions artifacts after run
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/purge-github-actions-artifacts.sh
