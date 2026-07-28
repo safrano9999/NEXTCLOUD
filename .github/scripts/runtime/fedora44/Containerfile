@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1
-FROM fedora:44 AS builder
+ARG FEDORA_IMAGE
+FROM ${FEDORA_IMAGE} AS builder
 
 ARG NEXTCLOUD_VERSION
 RUN test -n "$NEXTCLOUD_VERSION"
@@ -44,13 +45,15 @@ COPY scripts/bundle.sh /usr/local/bin/bundle-nextcloudcmd
 RUN chmod +x /usr/local/bin/bundle-nextcloudcmd \
  && /usr/local/bin/bundle-nextcloudcmd /stage /src /bundle
 
-FROM fedora:44 AS test
+FROM ${FEDORA_IMAGE} AS test
 ARG NEXTCLOUD_VERSION
 RUN dnf install -y --setopt=install_weak_deps=False zip \
  && dnf clean all
 COPY --from=bundler /bundle/ /bundle/
-RUN env -i HOME=/tmp PATH=/usr/bin:/bin \
-      /bundle/opt/nextcloudcmd/bin/nextcloudcmd --version \
+RUN version="$(env -i HOME=/tmp PATH=/usr/bin:/bin \
+      /bundle/opt/nextcloudcmd/bin/nextcloudcmd --version)" \
+ && printf '%s\n' "$version" \
+ && printf '%s\n' "$version" | grep -F "$NEXTCLOUD_VERSION" \
  && ! LD_LIBRARY_PATH=/bundle/opt/nextcloudcmd/lib \
       ldd /bundle/opt/nextcloudcmd/libexec/nextcloudcmd | grep -q 'not found' \
  && mkdir -p /release \

@@ -1,23 +1,35 @@
 # syntax=docker/dockerfile:1
-FROM debian:12-slim AS builder
+ARG DEBIAN_IMAGE
+FROM ${DEBIAN_IMAGE} AS builder
+
+ARG DEBIAN_NEXTCLOUD_PACKAGE_VERSION
+RUN test -n "$DEBIAN_NEXTCLOUD_PACKAGE_VERSION"
 
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-      ca-certificates nextcloud-desktop-cmd \
+      ca-certificates \
+      "libnextcloudsync0=${DEBIAN_NEXTCLOUD_PACKAGE_VERSION}" \
+      "nextcloud-desktop-cmd=${DEBIAN_NEXTCLOUD_PACKAGE_VERSION}" \
+      "nextcloud-desktop-common=${DEBIAN_NEXTCLOUD_PACKAGE_VERSION}" \
+      "nextcloud-desktop-l10n=${DEBIAN_NEXTCLOUD_PACKAGE_VERSION}" \
+ && test "$(dpkg-query -W -f='${Version}' nextcloud-desktop-cmd)" = "$DEBIAN_NEXTCLOUD_PACKAGE_VERSION" \
  && rm -rf /var/lib/apt/lists/*
 
 COPY scripts/bundle.sh /usr/local/bin/bundle-nextcloudcmd
 RUN chmod +x /usr/local/bin/bundle-nextcloudcmd \
  && /usr/local/bin/bundle-nextcloudcmd /bundle
 
-FROM debian:12-slim AS test
+FROM ${DEBIAN_IMAGE} AS test
+ARG NEXTCLOUD_VERSION
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       ca-certificates file zip \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /bundle/ /bundle/
-RUN env -i HOME=/tmp PATH=/usr/bin:/bin \
-      /bundle/opt/nextcloudcmd/bin/nextcloudcmd --version \
+RUN version="$(env -i HOME=/tmp PATH=/usr/bin:/bin \
+      /bundle/opt/nextcloudcmd/bin/nextcloudcmd --version)" \
+ && printf '%s\n' "$version" \
+ && printf '%s\n' "$version" | grep -F "$NEXTCLOUD_VERSION" \
  && ! LD_LIBRARY_PATH=/bundle/opt/nextcloudcmd/lib \
       ldd /bundle/opt/nextcloudcmd/libexec/nextcloudcmd | grep -q 'not found' \
  && mkdir -p /release \

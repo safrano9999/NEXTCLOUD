@@ -51,10 +51,10 @@ contains two x86-64 OpenClaw packages:
   [`nextcloud-debian64-plugin-latest.zip`](https://github.com/safrano9999/NEXTCLOUD/releases/download/latest/nextcloud-debian64-plugin-latest.zip)
   · [SHA-256](https://github.com/safrano9999/NEXTCLOUD/releases/download/latest/nextcloud-debian64-plugin-latest.zip.sha256)
 
-The Fedora package bundles a Fedora 44 build of `nextcloudcmd`. The Debian
-package bundles Debian 12's `nextcloud-desktop-cmd` runtime and its required
-libraries. Select the archive that matches the OpenClaw runtime's operating
-system family.
+The Fedora package pins the CLI source to **33.0.7** on Fedora 44. The Debian
+package pins the Bookworm CLI package to **3.7.3-1+deb12u2** on Debian 12.
+These are the exact combinations validated by the release build. Select the
+archive that matches the OpenClaw runtime's operating-system family.
 
 Both ZIPs are assembled and validated as **OpenClaw plugin packages**. For
 bare-metal use, clone the source and provide `nextcloudcmd` through the host

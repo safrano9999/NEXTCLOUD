@@ -10,6 +10,10 @@ permissions:
   contents: write
   actions: write
 
+concurrency:
+  group: ${{ startsWith(github.ref, 'refs/tags/20') && format('actual-head-{0}', github.repository) || github.run_id }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -17,6 +21,9 @@ jobs:
       DOCKER_BUILD_RECORD_UPLOAD: "false"
     steps:
       - uses: actions/checkout@v4
+      - name: Start actual-head history
+        if: startsWith(github.ref, 'refs/tags/20')
+        run: bash .github/scripts/actual-head.sh start
       - name: Purge old Actions artifacts
         continue-on-error: true
         env:
@@ -34,9 +41,22 @@ jobs:
           bash scripts/check.sh
           bash -n .github/scripts/runtime/fedora44/scripts/bundle.sh
           bash -n .github/scripts/runtime/debian12/scripts/bundle.sh
-      - id: fedora
-        name: Resolve Fedora runtime version
-        run: echo "version=$(<.github/scripts/runtime/fedora44/VERSION)" >> "$GITHUB_OUTPUT"
+      - id: runtime
+        name: Resolve runtime build configuration
+        run: |
+          source .github/scripts/runtime/build.config
+          [[ "$FEDORA_NEXTCLOUD_VERSION" =~ ^[0-9]+[.][0-9]+[.][0-9]+$ ]]
+          [[ "$DEBIAN_NEXTCLOUD_VERSION" =~ ^[0-9]+[.][0-9]+[.][0-9]+$ ]]
+          [[ "$DEBIAN_NEXTCLOUD_PACKAGE_VERSION" =~ ^[A-Za-z0-9.+:~_-]+$ ]]
+          [[ "$FEDORA_IMAGE" =~ ^[A-Za-z0-9./:_-]+$ ]]
+          [[ "$DEBIAN_IMAGE" =~ ^[A-Za-z0-9./:_-]+$ ]]
+          {
+            echo "fedora_version=$FEDORA_NEXTCLOUD_VERSION"
+            echo "debian_version=$DEBIAN_NEXTCLOUD_VERSION"
+            echo "debian_package_version=$DEBIAN_NEXTCLOUD_PACKAGE_VERSION"
+            echo "fedora_image=$FEDORA_IMAGE"
+            echo "debian_image=$DEBIAN_IMAGE"
+          } >> "$GITHUB_OUTPUT"
       - name: Build Fedora runtime
         uses: docker/build-push-action@v6
         with:
@@ -44,7 +64,8 @@ jobs:
           file: .github/scripts/runtime/fedora44/Containerfile
           target: artifact
           build-args: |
-            NEXTCLOUD_VERSION=${{ steps.fedora.outputs.version }}
+            NEXTCLOUD_VERSION=${{ steps.runtime.outputs.fedora_version }}
+            FEDORA_IMAGE=${{ steps.runtime.outputs.fedora_image }}
           outputs: type=local,dest=.runtime-dist/fedora44
       - name: Build Fedora plugin
         run: |
@@ -71,6 +92,10 @@ jobs:
           context: .github/scripts/runtime/debian12
           file: .github/scripts/runtime/debian12/Containerfile
           target: artifact
+          build-args: |
+            NEXTCLOUD_VERSION=${{ steps.runtime.outputs.debian_version }}
+            DEBIAN_NEXTCLOUD_PACKAGE_VERSION=${{ steps.runtime.outputs.debian_package_version }}
+            DEBIAN_IMAGE=${{ steps.runtime.outputs.debian_image }}
           outputs: type=local,dest=.runtime-dist/debian12
       - name: Build Debian plugin
         run: |
@@ -120,3 +145,23 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/purge-github-actions-artifacts.sh
+      - name: Finish actual-head history
+        if: startsWith(github.ref, 'refs/tags/20')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/actual-head.sh finish
+      - name: Publish build log
+        id: actual_head_upload
+        if: startsWith(github.ref, 'refs/tags/20')
+        uses: actions/upload-artifact@v4
+        with:
+          name: actual-head
+          path: actual-head.txt
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+      - name: Prune previous build logs
+        if: startsWith(github.ref, 'refs/tags/20')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/actual-head.sh cleanup "${{ steps.actual_head_upload.outputs.artifact-id }}"
