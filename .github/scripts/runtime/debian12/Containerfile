@@ -1,0 +1,32 @@
+# syntax=docker/dockerfile:1
+FROM debian:12-slim AS builder
+
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      ca-certificates nextcloud-desktop-cmd \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY scripts/bundle.sh /usr/local/bin/bundle-nextcloudcmd
+RUN chmod +x /usr/local/bin/bundle-nextcloudcmd \
+ && /usr/local/bin/bundle-nextcloudcmd /bundle
+
+FROM debian:12-slim AS test
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      ca-certificates file zip \
+ && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /bundle/ /bundle/
+RUN env -i HOME=/tmp PATH=/usr/bin:/bin \
+      /bundle/opt/nextcloudcmd/bin/nextcloudcmd --version \
+ && ! LD_LIBRARY_PATH=/bundle/opt/nextcloudcmd/lib \
+      ldd /bundle/opt/nextcloudcmd/libexec/nextcloudcmd | grep -q 'not found' \
+ && mkdir -p /release \
+ && cd /bundle \
+ && zip -9qr /release/nextcloudcmd-debian12-x86_64.zip opt \
+ && cd /release \
+ && sha256sum nextcloudcmd-debian12-x86_64.zip \
+      > nextcloudcmd-debian12-x86_64.zip.sha256 \
+ && du -sh /bundle/opt/nextcloudcmd /release/nextcloudcmd-debian12-x86_64.zip
+
+FROM scratch AS artifact
+COPY --from=test /release/ /
