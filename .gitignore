@@ -7,5 +7,4 @@ __pycache__/
 *.pyc
 nextcloud-*-plugin-latest.zip
 nextcloud-*-plugin-latest.zip.sha256
-/runtime/
 /.runtime-dist/

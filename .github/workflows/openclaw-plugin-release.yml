@@ -59,6 +59,11 @@ jobs:
           test -x runtime/opt/nextcloudcmd/bin/nextcloudcmd
           ZIP_NAME=nextcloud-fedora64-plugin-latest.zip \
             bash .github/scripts/openclaw_plugin_zip.sh
+          unzip -tqq nextcloud-fedora64-plugin-latest.zip
+          unzip -Z1 nextcloud-fedora64-plugin-latest.zip |
+            grep -Fx 'runtime/opt/nextcloudcmd/bin/nextcloudcmd'
+          test "$(stat -c %s nextcloud-fedora64-plugin-latest.zip)" -gt 1048576
+          sha256sum --check --status nextcloud-fedora64-plugin-latest.zip.sha256
           rm -rf runtime .runtime-dist/fedora44
       - name: Build Debian runtime
         uses: docker/build-push-action@v6
@@ -80,6 +85,11 @@ jobs:
           test -x runtime/opt/nextcloudcmd/bin/nextcloudcmd
           ZIP_NAME=nextcloud-debian64-plugin-latest.zip \
             bash .github/scripts/openclaw_plugin_zip.sh
+          unzip -tqq nextcloud-debian64-plugin-latest.zip
+          unzip -Z1 nextcloud-debian64-plugin-latest.zip |
+            grep -Fx 'runtime/opt/nextcloudcmd/bin/nextcloudcmd'
+          test "$(stat -c %s nextcloud-debian64-plugin-latest.zip)" -gt 1048576
+          sha256sum --check --status nextcloud-debian64-plugin-latest.zip.sha256
           rm -rf runtime .runtime-dist
       - name: Publish tagged release
         if: startsWith(github.ref, 'refs/tags/')
