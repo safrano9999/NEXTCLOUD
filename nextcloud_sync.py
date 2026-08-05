@@ -10,12 +10,14 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent
 ACCOUNT_RE = re.compile(r"^NEXTCLOUD_URL(?:_(\d+))?$")
+SECURITY_EXCLUDES = (".env",)
 
 
 @dataclass(frozen=True)
@@ -92,6 +94,27 @@ def binary() -> Path:
     raise FileNotFoundError("nextcloudcmd runtime not found")
 
 
+def write_exclude_file(executable: Path, directory: Path) -> Path:
+    candidates = [
+        ROOT / "runtime/opt/nextcloudcmd/etc/sync-exclude.lst",
+        executable.parent.parent / "etc/sync-exclude.lst",
+        Path("/opt/nextcloudcmd/etc/sync-exclude.lst"),
+        Path("/etc/Nextcloud/sync-exclude.lst"),
+    ]
+    content = ""
+    for candidate in candidates:
+        if candidate.is_file():
+            content = candidate.read_text(encoding="utf-8")
+            break
+    lines = content.rstrip().splitlines()
+    for pattern in SECURITY_EXCLUDES:
+        if pattern not in lines:
+            lines.append(pattern)
+    target = directory / "sync-exclude.lst"
+    target.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return target
+
+
 def sync_account(account: Account) -> int:
     if not account.folders:
         print(f"NEXTCLOUD {account.index}: file sync disabled", flush=True)
@@ -99,20 +122,23 @@ def sync_account(account: Account) -> int:
     executable = binary()
     child_env = dict(os.environ)
     child_env.update(NC_USER=account.user, NC_PASSWORD=account.password)
-    for pair in account.folders:
-        pair.local.mkdir(parents=True, exist_ok=True)
-        command = [
-            str(executable), "--non-interactive",
-            "--user", account.user,
-            "--password", account.password,
-        ]
-        if pair.remote.rstrip("/"):
-            command.extend(["--path", pair.remote])
-        command.extend([str(pair.local), account.url])
-        print(f"NEXTCLOUD {account.index}: {pair.remote} -> {pair.local}", flush=True)
-        completed = subprocess.run(command, env=child_env, check=False)
-        if completed.returncode:
-            return completed.returncode
+    with tempfile.TemporaryDirectory(prefix="nextcloud-sync-") as temporary:
+        exclude_file = write_exclude_file(executable, Path(temporary))
+        for pair in account.folders:
+            pair.local.mkdir(parents=True, exist_ok=True)
+            command = [
+                str(executable), "--non-interactive",
+                "--exclude", str(exclude_file),
+                "--user", account.user,
+                "--password", account.password,
+            ]
+            if pair.remote.rstrip("/"):
+                command.extend(["--path", pair.remote])
+            command.extend([str(pair.local), account.url])
+            print(f"NEXTCLOUD {account.index}: {pair.remote} -> {pair.local}", flush=True)
+            completed = subprocess.run(command, env=child_env, check=False)
+            if completed.returncode:
+                return completed.returncode
     return 0
 
 
