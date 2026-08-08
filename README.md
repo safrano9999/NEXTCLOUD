@@ -36,8 +36,9 @@ optional channel delivery.
 | OpenClaw | **Supported** | Optional Fedora 44 or Debian 12 release ZIP with a bundled `nextcloudcmd` runtime |
 | Hermes | **Not provided** | This repository contains no Hermes plugin, hook, or manifest |
 
-The files under `systemd/` support image-style deployments at
-`/opt/safrano9999/NEXTCLOUD`. Generic bare-metal use does not require them.
+The files under `image/runtime/` provide the rootfs overlay for image-style
+deployments at `/opt/safrano9999/NEXTCLOUD`. Generic bare-metal use does not
+require them.
 
 ## Releases
 
@@ -264,18 +265,18 @@ Inside OpenClaw, the plugin starts in-process fallback timers from injected
 `NEXTCLOUD_TIMER` variables. It waits two minutes before the first scheduled
 sync and prevents overlapping syncs for the same account.
 
-Image deployments can install:
+Image deployments consume the repository-owned runtime overlay directly:
 
 ```text
-systemd/nextcloud-sync@.service
-systemd/nextcloud-timer-generator
+image/runtime/etc/systemd/system/nextcloud-sync@.service
+image/runtime/usr/lib/systemd/system-generators/nextcloud-timer-generator
 ```
 
 The service intentionally expects the application at
-`/opt/safrano9999/NEXTCLOUD`. The generator reads `NEXTCLOUD_TIMER` and
-`NEXTCLOUD_TIMER_XX` from its systemd generator environment and creates
-persistent timer units. Adapt the unit and environment explicitly for another
-bare-metal layout.
+`/opt/safrano9999/NEXTCLOUD`. The generator reads
+`NEXTCLOUD_TIMER` and `NEXTCLOUD_TIMER_XX` from its systemd generator environment
+and creates persistent timer units. Adapt the unit and environment explicitly
+for another bare-metal layout.
 
 ## Security and storage
 
