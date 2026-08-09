@@ -275,8 +275,9 @@ image/runtime/usr/lib/systemd/system-generators/nextcloud-timer-generator
 The service intentionally expects the application at
 `/opt/safrano9999/NEXTCLOUD`. The generator reads
 `NEXTCLOUD_TIMER` and `NEXTCLOUD_TIMER_XX` from its systemd generator environment
-and creates persistent timer units. Adapt the unit and environment explicitly
-for another bare-metal layout.
+and starts one initial `nextcloud-sync@N.service` for every configured account.
+Only after those one-shots complete does it activate their recurring timers.
+Adapt the unit and environment explicitly for another bare-metal layout.
 
 ## Security and storage
 

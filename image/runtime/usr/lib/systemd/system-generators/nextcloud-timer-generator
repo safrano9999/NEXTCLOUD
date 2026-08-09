@@ -9,26 +9,63 @@ from pathlib import Path
 
 def main() -> int:
     output = Path(sys.argv[1])
-    wants = output / "timers.target.wants"
-    wants.mkdir(parents=True, exist_ok=True)
+    timer_wants = output / "timers.target.wants"
+    timer_wants.mkdir(parents=True, exist_ok=True)
     pattern = re.compile(r"^NEXTCLOUD_TIMER(?:_(\d+))?$")
+    instances: set[int] = set()
     for key, interval in sorted(os.environ.items()):
         match = pattern.match(key)
         if not match or interval.strip().lower() in {"", "0", "false", "off", "none"}:
             continue
-        index = str(int(match.group(1) or "1"))
+        numeric_index = int(match.group(1) or "1")
+        if numeric_index in instances:
+            continue
+        instances.add(numeric_index)
+        index = str(numeric_index)
         name = f"nextcloud-sync@{index}.timer"
         unit = output / name
         unit.write_text(
-            "[Unit]\nDescription=Nextcloud account " + index + " synchronization timer\n\n"
-            "[Timer]\nOnBootSec=2min\nOnUnitInactiveSec=" + interval.strip() + "\n"
-            "Persistent=true\nUnit=nextcloud-sync@" + index + ".service\n\n"
+            "[Unit]\nDescription=Nextcloud account " + index + " synchronization timer\n"
+            "Wants=nextcloud-initial-sync.target\n"
+            "After=persistainer.service nextcloud-initial-sync.target\n\n"
+            "[Timer]\nOnUnitInactiveSec=" + interval.strip() + "\n"
+            "Unit=nextcloud-sync@" + index + ".service\n\n"
             "[Install]\nWantedBy=timers.target\n",
             encoding="utf-8",
         )
-        link = wants / name
+        link = timer_wants / name
         if not link.exists():
             link.symlink_to(Path("..") / name)
+
+    if instances:
+        sync_units = " ".join(
+            f"nextcloud-sync@{index}.service" for index in sorted(instances)
+        )
+        target_name = "nextcloud-initial-sync.target"
+        (output / target_name).write_text(
+            "[Unit]\n"
+            "Description=Initial synchronization of configured Nextcloud accounts\n"
+            f"Wants={sync_units}\n"
+            f"After=persistainer.service {sync_units}\n\n"
+            "[Install]\nWantedBy=multi-user.target\n",
+            encoding="utf-8",
+        )
+        boot_wants = output / "multi-user.target.wants"
+        boot_wants.mkdir(parents=True, exist_ok=True)
+        target_link = boot_wants / target_name
+        if not target_link.exists():
+            target_link.symlink_to(Path("..") / target_name)
+
+        for dependent in (
+            "citadel-scan.service",
+            "openclaw-ephemeral-schedule.service",
+        ):
+            dropin_dir = output / f"{dependent}.d"
+            dropin_dir.mkdir(parents=True, exist_ok=True)
+            (dropin_dir / "50-nextcloud-instances.conf").write_text(
+                f"[Unit]\nAfter={target_name}\n",
+                encoding="utf-8",
+            )
     return 0
 
 

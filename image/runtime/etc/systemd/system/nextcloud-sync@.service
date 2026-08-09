@@ -1,9 +1,11 @@
 [Unit]
 Description=Nextcloud account %i synchronization
-After=network-online.target
+Requires=persistainer.service
+After=network-online.target persistainer.service
 Wants=network-online.target
 
 [Service]
 Type=oneshot
 WorkingDirectory=/opt/safrano9999/NEXTCLOUD
 ExecStart=/usr/bin/python3 /opt/safrano9999/NEXTCLOUD/nextcloud_sync.py --account %i
+TimeoutStartSec=infinity
