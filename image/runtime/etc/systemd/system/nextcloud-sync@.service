@@ -3,6 +3,7 @@ Description=Nextcloud account %i synchronization
 Requires=persistainer.service
 After=network-online.target persistainer.service
 Wants=network-online.target
+Before=citadel-scan.service openclaw-ephemeral-schedule.service
 
 [Service]
 Type=oneshot

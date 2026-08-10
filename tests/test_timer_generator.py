@@ -12,7 +12,7 @@ GENERATOR = ROOT / "image/runtime/usr/lib/systemd/system-generators/nextcloud-ti
 
 
 class NextcloudTimerGeneratorTests(unittest.TestCase):
-    def test_orders_dynamic_instances_after_persistainer(self) -> None:
+    def test_generates_boot_syncs_and_recurring_timers(self) -> None:
         environment = {
             "PATH": os.environ.get("PATH", ""),
             "NEXTCLOUD_TIMER": "15min",
@@ -26,41 +26,44 @@ class NextcloudTimerGeneratorTests(unittest.TestCase):
             timer = (output / "nextcloud-sync@1.timer").read_text(encoding="utf-8")
             self.assertIn("After=persistainer.service", timer)
             self.assertNotIn("OnBootSec=", timer)
-            self.assertIn("Wants=nextcloud-initial-sync.target", timer)
+            self.assertNotIn("nextcloud-initial-sync.target", timer)
+            self.assertIn("OnUnitInactiveSec=15min", timer)
+            self.assertIn("Unit=nextcloud-sync@1.service", timer)
+            self.assertIn(
+                "OnUnitInactiveSec=1h",
+                (output / "nextcloud-sync@3.timer").read_text(encoding="utf-8"),
+            )
 
-            initial = (output / "nextcloud-initial-sync.target").read_text(
-                encoding="utf-8"
-            )
-            self.assertIn(
-                "Wants=nextcloud-sync@1.service nextcloud-sync@3.service",
-                initial,
-            )
-            self.assertIn(
-                "After=persistainer.service nextcloud-sync@1.service "
-                "nextcloud-sync@3.service",
-                initial,
-            )
-            self.assertTrue(
-                (output / "multi-user.target.wants/nextcloud-initial-sync.target")
-                .is_symlink()
-            )
-            for dependent in (
-                "citadel-scan.service",
-                "openclaw-ephemeral-schedule.service",
-            ):
-                dropin = output / f"{dependent}.d/50-nextcloud-instances.conf"
-                self.assertIn(
-                    "After=nextcloud-initial-sync.target",
-                    dropin.read_text(encoding="utf-8"),
+            for index in (1, 3):
+                self.assertTrue(
+                    (output / f"timers.target.wants/nextcloud-sync@{index}.timer")
+                    .is_symlink()
+                )
+                service_link = (
+                    output / f"multi-user.target.wants/nextcloud-sync@{index}.service"
+                )
+                self.assertTrue(service_link.is_symlink())
+                self.assertEqual(
+                    os.readlink(service_link),
+                    "/etc/systemd/system/nextcloud-sync@.service",
                 )
 
             self.assertFalse((output / "nextcloud-sync@4.timer").exists())
+            self.assertFalse((output / "nextcloud-initial-sync.target").exists())
+            self.assertFalse((output / "citadel-scan.service.d").exists())
+            self.assertFalse(
+                (output / "openclaw-ephemeral-schedule.service.d").exists()
+            )
 
             service = (
                 ROOT
                 / "image/runtime/etc/systemd/system/nextcloud-sync@.service"
             ).read_text(encoding="utf-8")
             self.assertIn("Requires=persistainer.service", service)
+            self.assertIn(
+                "Before=citadel-scan.service openclaw-ephemeral-schedule.service",
+                service,
+            )
             self.assertIn("TimeoutStartSec=infinity", service)
 
 

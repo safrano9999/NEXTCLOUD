@@ -10,7 +10,9 @@ from pathlib import Path
 def main() -> int:
     output = Path(sys.argv[1])
     timer_wants = output / "timers.target.wants"
+    boot_wants = output / "multi-user.target.wants"
     timer_wants.mkdir(parents=True, exist_ok=True)
+    boot_wants.mkdir(parents=True, exist_ok=True)
     pattern = re.compile(r"^NEXTCLOUD_TIMER(?:_(\d+))?$")
     instances: set[int] = set()
     for key, interval in sorted(os.environ.items()):
@@ -26,8 +28,7 @@ def main() -> int:
         unit = output / name
         unit.write_text(
             "[Unit]\nDescription=Nextcloud account " + index + " synchronization timer\n"
-            "Wants=nextcloud-initial-sync.target\n"
-            "After=persistainer.service nextcloud-initial-sync.target\n\n"
+            "After=persistainer.service\n\n"
             "[Timer]\nOnUnitInactiveSec=" + interval.strip() + "\n"
             "Unit=nextcloud-sync@" + index + ".service\n\n"
             "[Install]\nWantedBy=timers.target\n",
@@ -36,35 +37,11 @@ def main() -> int:
         link = timer_wants / name
         if not link.exists():
             link.symlink_to(Path("..") / name)
-
-    if instances:
-        sync_units = " ".join(
-            f"nextcloud-sync@{index}.service" for index in sorted(instances)
-        )
-        target_name = "nextcloud-initial-sync.target"
-        (output / target_name).write_text(
-            "[Unit]\n"
-            "Description=Initial synchronization of configured Nextcloud accounts\n"
-            f"Wants={sync_units}\n"
-            f"After=persistainer.service {sync_units}\n\n"
-            "[Install]\nWantedBy=multi-user.target\n",
-            encoding="utf-8",
-        )
-        boot_wants = output / "multi-user.target.wants"
-        boot_wants.mkdir(parents=True, exist_ok=True)
-        target_link = boot_wants / target_name
-        if not target_link.exists():
-            target_link.symlink_to(Path("..") / target_name)
-
-        for dependent in (
-            "citadel-scan.service",
-            "openclaw-ephemeral-schedule.service",
-        ):
-            dropin_dir = output / f"{dependent}.d"
-            dropin_dir.mkdir(parents=True, exist_ok=True)
-            (dropin_dir / "50-nextcloud-instances.conf").write_text(
-                f"[Unit]\nAfter={target_name}\n",
-                encoding="utf-8",
+        service_name = f"nextcloud-sync@{index}.service"
+        service_link = boot_wants / service_name
+        if not service_link.exists():
+            service_link.symlink_to(
+                Path("/etc/systemd/system/nextcloud-sync@.service")
             )
     return 0
 
