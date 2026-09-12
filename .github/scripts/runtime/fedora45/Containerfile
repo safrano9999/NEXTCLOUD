@@ -58,11 +58,11 @@ RUN version="$(env -i HOME=/tmp PATH=/usr/bin:/bin \
       ldd /bundle/opt/nextcloudcmd/libexec/nextcloudcmd | grep -q 'not found' \
  && mkdir -p /release \
  && cd /bundle \
- && zip -9qr /release/nextcloudcmd-fedora44-x86_64.zip opt \
+ && zip -9qr /release/nextcloudcmd-fedora45-x86_64.zip opt \
  && cd /release \
- && sha256sum nextcloudcmd-fedora44-x86_64.zip \
-      > nextcloudcmd-fedora44-x86_64.zip.sha256 \
- && du -sh /bundle/opt/nextcloudcmd /release/nextcloudcmd-fedora44-x86_64.zip
+ && sha256sum nextcloudcmd-fedora45-x86_64.zip \
+      > nextcloudcmd-fedora45-x86_64.zip.sha256 \
+ && du -sh /bundle/opt/nextcloudcmd /release/nextcloudcmd-fedora45-x86_64.zip
 
 FROM scratch AS artifact
 COPY --from=test /release/ /

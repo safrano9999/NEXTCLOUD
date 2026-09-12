@@ -40,7 +40,7 @@ jobs:
       - name: Check plugin sources
         run: |
           bash scripts/check.sh
-          bash -n .github/scripts/runtime/fedora44/scripts/bundle.sh
+          bash -n .github/scripts/runtime/fedora45/scripts/bundle.sh
           bash -n .github/scripts/runtime/debian12/scripts/bundle.sh
       - id: runtime
         name: Resolve runtime build configuration
@@ -61,25 +61,25 @@ jobs:
       - name: Build Fedora runtime
         uses: docker/build-push-action@v6
         with:
-          context: .github/scripts/runtime/fedora44
-          file: .github/scripts/runtime/fedora44/Containerfile
+          context: .github/scripts/runtime/fedora45
+          file: .github/scripts/runtime/fedora45/Containerfile
           target: artifact
           pull: true
           no-cache: true
           build-args: |
             NEXTCLOUD_VERSION=${{ steps.runtime.outputs.fedora_version }}
             FEDORA_IMAGE=${{ steps.runtime.outputs.fedora_image }}
-          outputs: type=local,dest=.runtime-dist/fedora44
+          outputs: type=local,dest=.runtime-dist/fedora45
       - name: Build Fedora plugin
         run: |
-          unzip -t .runtime-dist/fedora44/nextcloudcmd-fedora44-x86_64.zip
+          unzip -t .runtime-dist/fedora45/nextcloudcmd-fedora45-x86_64.zip
           (
-            cd .runtime-dist/fedora44
-            sha256sum -c nextcloudcmd-fedora44-x86_64.zip.sha256
+            cd .runtime-dist/fedora45
+            sha256sum -c nextcloudcmd-fedora45-x86_64.zip.sha256
           )
           rm -rf runtime
           mkdir -p runtime
-          unzip -q .runtime-dist/fedora44/nextcloudcmd-fedora44-x86_64.zip -d runtime
+          unzip -q .runtime-dist/fedora45/nextcloudcmd-fedora45-x86_64.zip -d runtime
           test -x runtime/opt/nextcloudcmd/bin/nextcloudcmd
           ZIP_NAME=nextcloud-fedora64-plugin-latest.zip \
             bash .github/scripts/openclaw_plugin_zip.sh
@@ -88,7 +88,7 @@ jobs:
             grep -Fx 'runtime/opt/nextcloudcmd/bin/nextcloudcmd'
           test "$(stat -c %s nextcloud-fedora64-plugin-latest.zip)" -gt 1048576
           sha256sum --check --status nextcloud-fedora64-plugin-latest.zip.sha256
-          rm -rf runtime .runtime-dist/fedora44
+          rm -rf runtime .runtime-dist/fedora45
       - name: Build Debian runtime
         uses: docker/build-push-action@v6
         with:
@@ -130,7 +130,7 @@ jobs:
             gh release upload "$GITHUB_REF_NAME" nextcloud-*-plugin-latest.zip* --clobber
           else
             gh release create "$GITHUB_REF_NAME" nextcloud-*-plugin-latest.zip* \
-              --title "$GITHUB_REF_NAME" --notes "NEXTCLOUD OpenClaw plugin for Fedora 44 and Debian 12."
+              --title "$GITHUB_REF_NAME" --notes "NEXTCLOUD OpenClaw plugin for Fedora 45 and Debian 12."
           fi
       - name: Publish latest alias
         if: startsWith(github.ref, 'refs/tags/')

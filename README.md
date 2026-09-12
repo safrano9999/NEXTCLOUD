@@ -26,14 +26,14 @@ optional channel delivery.
 - OpenClaw slash command `/nextcloud`.
 - Authenticated calendar webhook at `POST /plugins/nextcloud/run`.
 - Optional outbound delivery through an OpenClaw channel adapter.
-- Bundled `nextcloudcmd` runtimes for Fedora 44 and Debian 12 plugin installs.
+- Bundled `nextcloudcmd` runtimes for Fedora 45 and Debian 12 plugin installs.
 
 ## Supported deployment modes
 
 | Mode | Status | What is provided |
 |---|---|---|
 | Bare metal | **Supported** | Python sync and calendar CLIs; `nextcloudcmd` must be installed separately |
-| OpenClaw | **Supported** | Optional Fedora 44 or Debian 12 release ZIP with a bundled `nextcloudcmd` runtime |
+| OpenClaw | **Supported** | Optional Fedora 45 or Debian 12 release ZIP with a bundled `nextcloudcmd` runtime |
 | Hermes | **Not provided** | This repository contains no Hermes plugin, hook, or manifest |
 
 The files under `image/runtime/` provide the rootfs overlay for image-style
@@ -45,14 +45,14 @@ require them.
 The [latest release](https://github.com/safrano9999/NEXTCLOUD/releases/latest)
 contains two x86-64 OpenClaw packages:
 
-- **Fedora 44:**
+- **Fedora 45:**
   [`nextcloud-fedora64-plugin-latest.zip`](https://github.com/safrano9999/NEXTCLOUD/releases/download/latest/nextcloud-fedora64-plugin-latest.zip)
   · [SHA-256](https://github.com/safrano9999/NEXTCLOUD/releases/download/latest/nextcloud-fedora64-plugin-latest.zip.sha256)
 - **Debian 12:**
   [`nextcloud-debian64-plugin-latest.zip`](https://github.com/safrano9999/NEXTCLOUD/releases/download/latest/nextcloud-debian64-plugin-latest.zip)
   · [SHA-256](https://github.com/safrano9999/NEXTCLOUD/releases/download/latest/nextcloud-debian64-plugin-latest.zip.sha256)
 
-The Fedora package pins the CLI source to **33.0.7** on Fedora 44. The Debian
+The Fedora package pins the CLI source to **33.0.7** on Fedora 45. The Debian
 package pins the Bookworm CLI package to **3.7.3-1+deb12u2** on Debian 12.
 These are the exact combinations validated by the release build. Select the
 archive that matches the OpenClaw runtime's operating-system family.
@@ -117,7 +117,7 @@ mkdir -p LOGS
 
 Choose exactly one runtime archive.
 
-### Fedora 44
+### Fedora 45
 
 ```bash
 curl -fL \
