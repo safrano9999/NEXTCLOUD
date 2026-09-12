@@ -7,7 +7,7 @@ RUN test -n "$NEXTCLOUD_VERSION"
 
 RUN dnf install -y --setopt=install_weak_deps=False \
       ca-certificates cmake curl extra-cmake-modules gcc-c++ inotify-tools-devel \
-      kf6-karchive-devel libp11-devel ninja-build openssl-devel openssl-devel-engine pkgconf-pkg-config \
+      kf6-karchive-devel libp11-devel ninja-build openssl-devel openssl3-devel-engine pkgconf-pkg-config \
       qt6-qt5compat-devel qt6-qtbase-devel qt6-qtbase-private-devel qt6-qtdeclarative-devel qt6-qtsvg-devel \
       qt6-qttools qt6-qttools-devel qt6-qtwebsockets-devel qtkeychain-qt6-devel \
       kdsingleapplication-qt6-devel sqlite-devel zlib-devel \
